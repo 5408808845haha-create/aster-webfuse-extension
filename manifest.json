@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Aster YouTube Recovery",
-  "version": "2.1.0",
-  "description": "Keeps YouTube playback checkpoints and reports player failures to Aster.",
+  "version": "2.2.0",
+  "description": "Diagnostics + YouTube playback checkpoints and error reporting for Aster.",
   "background": {
     "service_worker": "background.js"
   },
@@ -14,8 +14,7 @@
       ],
       "js": [
         "content.js"
-      ],
-      "run_at": "document_idle"
+      ]
     }
   ]
 }
