@@ -1,7 +1,7 @@
-// Aster YouTube Recovery V2 - content script
+// Aster YouTube Recovery V2.2 - content diagnostics + checkpoints
 (() => {
-  if (window.__ASTER_YT_RECOVERY_V2__) return;
-  window.__ASTER_YT_RECOVERY_V2__ = true;
+  if (window.__ASTER_YT_RECOVERY_V22__) return;
+  window.__ASTER_YT_RECOVERY_V22__ = true;
 
   const STATE = {
     lastTime: 0,
@@ -11,6 +11,44 @@
     video: null,
     url: location.href
   };
+
+  function send(type, extra = {}) {
+    try {
+      browser.runtime.sendMessage({
+        aster: true,
+        type,
+        source: "youtube",
+        url: location.href,
+        at: Date.now(),
+        ...extra
+      });
+    } catch (error) {
+      console.error("[Aster YT Recovery] send failed", error);
+    }
+  }
+
+  function addBadge() {
+    if (document.getElementById("aster-yt-recovery-badge")) return;
+    const badge = document.createElement("div");
+    badge.id = "aster-yt-recovery-badge";
+    badge.textContent = "AY âœ“";
+    Object.assign(badge.style, {
+      position: "fixed",
+      right: "12px",
+      bottom: "12px",
+      zIndex: "2147483647",
+      font: "600 11px/1.2 system-ui,-apple-system,BlinkMacSystemFont,sans-serif",
+      padding: "5px 7px",
+      borderRadius: "8px",
+      background: "rgba(15,15,18,.78)",
+      color: "#fff",
+      border: "1px solid rgba(255,255,255,.2)",
+      backdropFilter: "blur(8px)",
+      pointerEvents: "none",
+      opacity: ".8"
+    });
+    (document.documentElement || document.body).appendChild(badge);
+  }
 
   function videoId() {
     try {
@@ -24,24 +62,9 @@
     }
   }
 
-  function send(type, extra = {}) {
-    try {
-      browser.runtime.sendMessage({
-        aster: true,
-        type,
-        source: "youtube",
-        url: location.href,
-        videoId: videoId(),
-        at: Date.now(),
-        ...extra
-      });
-    } catch (_) {}
-  }
-
   function checkpoint(reason = "interval") {
     const v = document.querySelector("video");
     if (!v || !Number.isFinite(v.currentTime)) return;
-
     STATE.lastTime = v.currentTime;
     STATE.lastCheckpointAt = Date.now();
 
@@ -52,7 +75,8 @@
       paused: !!v.paused,
       ended: !!v.ended,
       readyState: v.readyState,
-      networkState: v.networkState
+      networkState: v.networkState,
+      videoId: videoId()
     });
   }
 
@@ -70,6 +94,7 @@
       readyState: v ? v.readyState : null,
       networkState: v ? v.networkState : null,
       mediaErrorCode: v && v.error ? v.error.code : null,
+      videoId: videoId(),
       ...detail
     });
   }
@@ -138,7 +163,14 @@
     }
   }
 
+  addBadge();
+  send("ASTER_EXTENSION_ALIVE", {
+    title: document.title,
+    readyState: document.readyState
+  });
+
   setInterval(() => {
+    addBadge();
     bindVideo();
     detectYouTubeErrorOverlay();
 
@@ -154,7 +186,6 @@
     if (Date.now() - STATE.lastCheckpointAt > 5000) checkpoint("interval");
   }, 2000);
 
-  // YouTube is an SPA: detect navigation without requiring a full page reload.
   setInterval(() => {
     if (location.href !== STATE.url) {
       checkpoint("navigation");
